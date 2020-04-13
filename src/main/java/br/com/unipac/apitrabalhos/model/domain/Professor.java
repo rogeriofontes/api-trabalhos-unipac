@@ -6,27 +6,17 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import javax.persistence.*;
-import java.util.Date;
 
 @Data
-@ToString
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@ToString
 @Entity
-@Table(name = "tb_trabalho")
-public class Trabalho {
+@Table(name = "tb_professor")
+public class Professor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "id_professor")
-    private Professor professor;
-
-    @Column(name = "titulo_do_trabalho")
-    private String tituloDoTrabalho;
-
-    private Date data;
-
+    private String nome;
 }

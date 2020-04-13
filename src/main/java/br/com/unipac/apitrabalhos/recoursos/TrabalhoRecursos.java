@@ -1,63 +1,79 @@
 package br.com.unipac.apitrabalhos.recoursos;
 
 import br.com.unipac.apitrabalhos.model.domain.Trabalho;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.RequestEntity;
+import br.com.unipac.apitrabalhos.model.repository.TrabalhoRepositorio;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.juli.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/trabalhos")
 public class TrabalhoRecursos {
-    List<Trabalho> trabalhoList = new ArrayList<>();
+
+    @Autowired
+    private TrabalhoRepositorio trabalhoRepositorio;
 
     @GetMapping("/{id}")
-    public ResponseEntity<Trabalho> getTrabalho(@PathVariable("id") int id){
-        Trabalho trabalho = trabalhoList.get(id);
+    public ResponseEntity<Trabalho> getTrabalho(@PathVariable("id") Long id){
+        Optional<Trabalho> trabalho = trabalhoRepositorio.findById(id);
 
-         if (trabalho == null) {
+        if (!trabalho.isPresent()) {
             return ResponseEntity.noContent().build();
         }
-        //early return
-        return ResponseEntity.ok(trabalho);
+        return ResponseEntity.ok(trabalho.get());
     }
 
     @GetMapping
     public ResponseEntity<List<Trabalho>> getTrabalhoList(){
-        if (trabalhoList.isEmpty()){
+        List<Trabalho> trabalhos = trabalhoRepositorio.findAll();
+        if (trabalhos.isEmpty()){
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(trabalhoList);
+        return ResponseEntity.ok(trabalhos);
     }
 
     @PostMapping
     public ResponseEntity<Trabalho> addTrabalho(@RequestBody Trabalho trabalho){
-        System.out.println("Gravou o trabalho: " +trabalho.toString());
-        trabalhoList.add(trabalho);
+        log.info("Gravou o trabalho: " +trabalho.toString());
 
-        URI url = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(trabalho.getId()).toUri();
-        return ResponseEntity.created(url).body(trabalho);
+        Trabalho saved = trabalhoRepositorio.save(trabalho);
+
+        URI url = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(saved.getId()).toUri();
+        return ResponseEntity.created(url).body(saved);
     }
 
-    @PutMapping
-    public ResponseEntity<List<Trabalho>> updateTrabalho(@PathVariable("id") int id, @RequestBody Trabalho novoTrabalho){
-        Trabalho trabalho = trabalhoList.remove(id);
-        trabalhoList.add(novoTrabalho);
+    @PutMapping("/{id}")
+    public ResponseEntity<Trabalho> updateTrabalho(@PathVariable("id") Long id, @RequestBody Trabalho novoTrabalho){
+        Optional<Trabalho> trabalho = trabalhoRepositorio.findById(id);
 
-        return ResponseEntity.ok(trabalhoList);
+        if (trabalho.isPresent()) {
+            Trabalho trabalhoParaUpdate = trabalho.get();
+            trabalhoParaUpdate.setTituloDoTrabalho(novoTrabalho.getTituloDoTrabalho());
+            trabalhoParaUpdate.setProfessor(novoTrabalho.getProfessor());
+            trabalhoParaUpdate.setData(novoTrabalho.getData());
+
+            trabalhoRepositorio.save(trabalhoParaUpdate);
+
+            return ResponseEntity.ok(trabalhoParaUpdate);
+        } else {
+            log.info("Trabalho nao pode ser alterado: " + trabalho.toString());
+        }
+
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> remove(@PathVariable("id") Long id) {
         try {
-            trabalhoList.remove(id);
+            trabalhoRepositorio.deleteById(id);
             return ResponseEntity.ok("Dados Deletados");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Dados nao pode ser removidos" + e.getMessage());
